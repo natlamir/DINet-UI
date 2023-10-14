@@ -89,14 +89,28 @@ namespace DINet_UI
                 string condaEnv = ConfigurationManager.AppSettings["CondaEnvironmentName"];
                 string openFaceDir = ConfigurationManager.AppSettings["OpenFaceDirectory"].TrimEnd(new char[] { '\\', '/' });
                 string dinetDir = ConfigurationManager.AppSettings["DINetDirectory"].TrimEnd(new char[] { '\\', '/' });
+                string anacondaScriptsPath = ConfigurationManager.AppSettings["AnacondaScriptsPath"].TrimEnd(new char[] { '\\', '/' });
                 string csvDir = $"{dinetDir}\\asserts\\input";
                 string vidFileWithoutExtension = Path.GetFileNameWithoutExtension(txtInputVideo.Text);
+                string vidFolderPath = Path.GetDirectoryName(txtInputVideo.Text) + "\\" + vidFileWithoutExtension;
 
                 string exePath = openFaceDir + "\\featureextraction.exe";
-
                 string parameters = $"-f \"{txtInputVideo.Text}\" -out_dir \"{csvDir}\"";
-
                 string command = $"{exePath}  {parameters}";
+
+                if(Directory.Exists(vidFolderPath))
+                {
+                    MessageBox.Show("Existing directory found: " + Environment.NewLine + vidFolderPath + Environment.NewLine + "Please manually delete this directory or re-name it if it is a directory you want to keep. The DINet uses this directory name to generate the images, and then the app's cleanup process will delete this direcotry.");
+                    txtLog.AppendText("Existing directory found: " + Environment.NewLine + vidFolderPath + Environment.NewLine + "Please manually delete this directory or re-name it if it is a directory you want to keep. The DINet uses this directory name to generate the images, and then the app's cleanup process will delete this direcotry.");
+                    return;
+                }
+
+                if(!File.Exists(anacondaScriptsPath + "\\activate.bat"))
+                {
+                    MessageBox.Show("In the .config file, the value for 'AnacondaScriptsPath' of: " + Environment.NewLine + anacondaScriptsPath + Environment.NewLine + " is not valid. Update the value and re-launch the app.");
+                    txtLog.AppendText("In the .config file, the value for 'AnacondaScriptsPath' of: " + Environment.NewLine + anacondaScriptsPath + Environment.NewLine + " is not valid. Update the value and re-launch the app.");
+                    return;
+                }
 
                 txtLog.AppendText("Calling OpenFace to generate CSV..." + Environment.NewLine);
 
@@ -219,7 +233,7 @@ namespace DINet_UI
                 string scriptDirectory = Path.GetDirectoryName(pythonScriptPath);
 
                 // Construct the command to activate the Conda environment and run the Python script
-                command = $"conda activate {condaEnv} && cd {scriptDirectory} && python -u {pythonScriptPath} {pythonScriptArguments}";
+                command = $"{anacondaScriptsPath}\\activate.bat && activate {condaEnv} && cd {scriptDirectory} && python -u {pythonScriptPath} {pythonScriptArguments}";
 
                 // Create a process start info
                 startInfo = new ProcessStartInfo
@@ -267,7 +281,6 @@ namespace DINet_UI
                 txtLog.AppendText("DINet complete. Cleaning up files..." + Environment.NewLine);
                 // cleanup. delete directories and files that were created            
 
-                string vidFolderPath = Path.GetDirectoryName(txtInputVideo.Text) + "\\" + vidFileWithoutExtension;
                 string inferenceResultFolder = dinetDir + "\\asserts\\inference_result\\";
                 
                 Directory.Delete(vidFolderPath, true);
